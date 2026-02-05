@@ -1,8 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import Style from '@/views/StyleView.vue'
-import Home from '@/views/HomeView.vue'
-import Login from '@/views/LoginView.vue'
-import StyleView from '@/views/StyleView.vue'
+import Home from '../views/HomeView.vue'
+import Login from '../views/LoginView.vue'
 
 const routes = [
   {
@@ -29,7 +27,7 @@ const routes = [
     },
     path: '/tables',
     name: 'tables',
-    component: () => import('@/views/TablesView.vue'),
+    component: () => import('../views/TablesView.vue'),
   },
   {
     meta: {
@@ -37,7 +35,7 @@ const routes = [
     },
     path: '/forms',
     name: 'forms',
-    component: () => import('@/views/FormsView.vue'),
+    component: () => import('../views/FormsView.vue'),
   },
   {
     meta: {
@@ -45,7 +43,7 @@ const routes = [
     },
     path: '/profile',
     name: 'profile',
-    component: () => import('@/views/ProfileView.vue'),
+    component: () => import('../views/ProfileView.vue'),
   },
 
   {
@@ -54,7 +52,7 @@ const routes = [
     },
     path: '/error',
     name: 'error',
-    component: () => import('@/views/ErrorView.vue'),
+    component: () => import('../views/ErrorView.vue'),
   },
 ]
 

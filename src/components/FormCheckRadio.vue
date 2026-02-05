@@ -1,5 +1,5 @@
 <script setup>
-import { useDarkModeStore } from '@/stores/darkMode'
+import { useDarkModeStore } from '../stores/darkMode'
 import { computed } from 'vue'
 
 const props = defineProps({

@@ -1,6 +1,6 @@
 <script setup>
-import { colorsBgLight } from '@/colors.js'
-import { useDarkModeStore } from '@/stores/darkMode'
+import { colorsBgLight } from '../colors.js'
+import { useDarkModeStore } from '../stores/darkMode'
 
 defineProps({
   color: {

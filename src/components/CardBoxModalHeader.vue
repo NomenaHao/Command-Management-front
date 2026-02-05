@@ -1,7 +1,7 @@
 <script setup>
 import { mdiClose } from '@mdi/js'
-import BaseButton from '@/components/BaseButton.vue'
-import CardBoxComponentTitle from '@/components/CardBoxComponentTitle.vue'
+import BaseButton from '../components/BaseButton.vue'
+import CardBoxComponentTitle from '../components/CardBoxComponentTitle.vue'
 
 defineProps({
   title: {

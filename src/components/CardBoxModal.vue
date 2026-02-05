@@ -1,12 +1,12 @@
 <script setup>
 import { computed, onMounted, onUnmounted } from 'vue'
-import BaseButton from '@/components/BaseButton.vue'
-import BaseButtons from '@/components/BaseButtons.vue'
-import CardBox from '@/components/CardBox.vue'
-import OverlayLayer from '@/components/OverlayLayer.vue'
-import CardBoxComponentFooter from '@/components/CardBoxComponentFooter.vue'
-import CardBoxModalHeader from '@/components/CardBoxModalHeader.vue'
-import CardBoxModalBody from '@/components/CardBoxModalBody.vue'
+import BaseButton from '../components/BaseButton.vue'
+import BaseButtons from '../components/BaseButtons.vue'
+import CardBox from '../components/CardBox.vue'
+import OverlayLayer from '../components/OverlayLayer.vue'
+import CardBoxComponentFooter from '../components/CardBoxComponentFooter.vue'
+import CardBoxModalHeader from '../components/CardBoxModalHeader.vue'
+import CardBoxModalBody from '../components/CardBoxModalBody.vue'
 
 const props = defineProps({
   title: {

@@ -1,9 +1,9 @@
 <script setup>
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { getButtonColor } from '@/colors.js'
-import BaseIcon from '@/components/BaseIcon.vue'
-import { useDarkModeStore } from '@/stores/darkMode'
+import { getButtonColor } from '../colors.js'
+import BaseIcon from '../components/BaseIcon.vue'
+import { useDarkModeStore } from '../stores/darkMode'
 
 const props = defineProps({
   label: [String, Number],

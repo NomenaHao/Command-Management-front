@@ -3,7 +3,7 @@ import { createPinia } from 'pinia'
 
 import App from './App.vue'
 import router from './router'
-import { useMainStore } from '@/stores/main.js'
+import { useMainStore } from './stores/main.js'
 
 import './css/main.css'
 
@@ -22,7 +22,7 @@ mainStore.fetchSampleHistory()
 
 // Dark mode
 // Activer le mode dark par défaut
-import { useDarkModeStore } from '@/stores/darkMode'
+import { useDarkModeStore } from './stores/darkMode.js'
 
 const darkModeStore = useDarkModeStore(pinia)
 darkModeStore.set(true, true) // Activer et persister le mode dark

@@ -1,5 +1,5 @@
 <script setup>
-import CardBoxComponentBody from '@/components/CardBoxComponentBody.vue'
+import CardBoxComponentBody from '../components/CardBoxComponentBody.vue'
 </script>
 
 <template>
