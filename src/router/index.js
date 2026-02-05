@@ -1,6 +1,8 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import Home from '../views/HomeView.vue'
 import Login from '../views/LoginView.vue'
+import { useMainStore } from '../stores/main.js'
+import authService from '../services/authService.js'
 
 const routes = [
   {
@@ -31,6 +33,14 @@ const routes = [
   },
   {
     meta: {
+      title: 'Articles du fournisseur',
+    },
+    path: '/supplier/:id/products',
+    name: 'supplier-products',
+    component: () => import('../views/SupplierProductsView.vue'),
+  },
+  {
+    meta: {
       title: 'Forms',
     },
     path: '/forms',
@@ -44,6 +54,14 @@ const routes = [
     path: '/profile',
     name: 'profile',
     component: () => import('../views/ProfileView.vue'),
+  },
+  {
+    meta: {
+      title: 'Gestion des utilisateurs',
+    },
+    path: '/admin/users',
+    name: 'admin-users',
+    component: () => import('../views/AdminUsersView.vue'),
   },
 
   {
@@ -67,6 +85,19 @@ const router = createRouter({
 // Protection des routes - rediriger vers login si non authentifié
 router.beforeEach((to, from, next) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
+  
+  // Charger les infos utilisateur si authentifié et pas encore chargées
+  if (isAuthenticated) {
+    const mainStore = useMainStore()
+    if (!mainStore.userName) {
+      const user = authService.getCurrentUser()
+      if (user) {
+        mainStore.setUser({
+          username: user.username
+        })
+      }
+    }
+  }
   
   if (to.path !== '/' && !isAuthenticated) {
     next('/')

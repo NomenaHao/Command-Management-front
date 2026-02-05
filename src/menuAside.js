@@ -9,36 +9,25 @@ import {
   mdiTelevisionGuide,
   mdiPalette,
   mdiLogout,
+  mdiAccountMultiple,
 } from '@mdi/js'
 
 export const menuAsideMain = [
   {
     to: '/dashboard',
     icon: mdiMonitor,
-    label: 'Dashboard',
+    label: 'Tableau de bord',
   },
   {
     to: '/tables',
-    label: 'Tables',
+    label: 'Liste des clients',
     icon: mdiTable,
   },
   {
-    to: '/forms',
-    label: 'Forms',
-    icon: mdiSquareEditOutline,
+    to: '/admin/users',
+    label: 'Gestion des utilisateurs',
+    icon: mdiAccountMultiple,
   },
-
-  {
-    to: '/',
-    label: 'Login',
-    icon: mdiLock,
-  },
-  {
-    to: '/error',
-    label: 'Error',
-    icon: mdiAlertCircle,
-  },
-  
 ]
 
 export const menuAsideBottom = [

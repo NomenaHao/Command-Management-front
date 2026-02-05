@@ -3,12 +3,12 @@ import { ref, computed } from 'vue'
 import axios from 'axios'
 
 export const useMainStore = defineStore('main', () => {
-  const userName = ref('John Doe')
-  const userEmail = ref('doe.doe.doe@example.com')
+  const userName = ref('')  // Sera mis à jour après connexion
+  const userEmail = ref('')  // Sera mis à jour après connexion
 
   const userAvatar = computed(
     () =>
-      `https://api.dicebear.com/7.x/avataaars/svg?seed=${userEmail.value.replace(
+      `https://api.dicebear.com/7.x/avataaars/svg?seed=${userName.value.replace(
         /[^a-z0-9]+/gi,
         '-',
       )}`,
@@ -20,11 +20,8 @@ export const useMainStore = defineStore('main', () => {
   const history = ref([])
 
   function setUser(payload) {
-    if (payload.name) {
-      userName.value = payload.name
-    }
-    if (payload.email) {
-      userEmail.value = payload.email
+    if (payload.username) {
+      userName.value = payload.username
     }
   }
 

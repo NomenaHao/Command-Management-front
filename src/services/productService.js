@@ -18,12 +18,20 @@ export const productService = {
 
   // Créer un nouveau produit
   createProduct(productData) {
-    return api.post('/products', productData)
+    return api.post('/products', productData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
   },
 
   // Mettre à jour un produit
   updateProduct(id, productData) {
-    return api.put(`/products/${id}`, productData)
+    return api.put(`/products/${id}`, productData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
   },
 
   // Supprimer un produit
