@@ -28,8 +28,10 @@ const form = ref({
   username: '',
   password: '',
   confirmPassword: '',
+  imageFile: null,
 })
 
+const imagePreview = ref(null)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const currentUserId = ref(null)
@@ -43,12 +45,14 @@ onMounted(() => {
 const loadUsers = async () => {
   try {
     isLoading.value = true
+    error.value = ''
     const response = await userService.getAllUsers()
-    users.value = response.data.users
+    users.value = response.data.users || []
     error.value = ''
   } catch (err) {
-    // console.error('Aucun utilisateur:', err)
-    // error.value = 'Aucun utilisateur'
+    console.error('Erreur lors du chargement des utilisateurs:', err)
+    error.value = err.response?.data?.message || 'Erreur lors du chargement des utilisateurs'
+    users.value = []
   } finally {
     isLoading.value = false
   }
@@ -62,7 +66,9 @@ const openUserModal = (user = null) => {
       username: user.username,
       password: '',
       confirmPassword: '',
+      imageFile: null,
     }
+    imagePreview.value = user.avatar || null
   } else {
     isEditingUser.value = false
     currentUserId.value = null
@@ -70,7 +76,9 @@ const openUserModal = (user = null) => {
       username: '',
       password: '',
       confirmPassword: '',
+      imageFile: null,
     }
+    imagePreview.value = null
   }
   showPassword.value = false
   showConfirmPassword.value = false
@@ -83,19 +91,20 @@ const closeUserModal = () => {
     username: '',
     password: '',
     confirmPassword: '',
+    imageFile: null,
   }
   currentUserId.value = null
   isEditingUser.value = false
   error.value = ''
   showPassword.value = false
   showConfirmPassword.value = false
+  imagePreview.value = null
 }
 
 const saveUser = async () => {
   try {
     error.value = ''
     success.value = ''
-
 
     if (!form.value.username.trim()) {
       error.value = 'Le nom d\'utilisateur est requis'
@@ -112,22 +121,25 @@ const saveUser = async () => {
       return
     }
 
-    const userData = {
-      username: form.value.username,
-    }
-
-    // Ajouter le password seulement si fourni
+    // Créer FormData pour gérer l'image
+    const formData = new FormData()
+    formData.append('username', form.value.username)
+    
     if (form.value.password) {
-      userData.password = form.value.password
+      formData.append('password', form.value.password)
+    }
+    
+    if (form.value.imageFile) {
+      formData.append('avatar', form.value.imageFile)
     }
 
     if (isEditingUser.value) {
       // Mise à jour
-      await userService.updateUser(currentUserId.value, userData)
+      await userService.updateUser(currentUserId.value, formData)
       success.value = 'Utilisateur mis à jour avec succès'
     } else {
       // Création
-      await userService.createUser(userData)
+      await userService.createUser(formData)
       success.value = 'Utilisateur créé avec succès'
     }
 
@@ -141,6 +153,18 @@ const saveUser = async () => {
   } catch (err) {
     console.error('Erreur lors de la sauvegarde:', err)
     error.value = err.response?.data?.message || 'Erreur lors de la sauvegarde'
+  }
+}
+
+const handleImageSelect = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    form.value.imageFile = file
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      imagePreview.value = e.target.result
+    }
+    reader.readAsDataURL(file)
   }
 }
 
@@ -214,6 +238,9 @@ const deleteUser = async (id, username) => {
             <thead class="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
               <tr>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                  Avatar
+                </th>
+                <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
                   Nom d'utilisateur
                 </th>
                 <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
@@ -230,6 +257,13 @@ const deleteUser = async (id, username) => {
                 :key="user.id"
                 class="border-b border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
               >
+                <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                  <img 
+                    :src="user.avatar && user.avatar.startsWith('/') ? `http://localhost:3001${user.avatar}` : (user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`)" 
+                    :alt="user.username"
+                    class="w-10 h-10 rounded-full border-2 border-gray-200 dark:border-gray-600"
+                  />
+                </td>
                 <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                   {{ user.username }}
                 </td>
@@ -259,7 +293,6 @@ const deleteUser = async (id, username) => {
       </CardBox>
     </SectionMain>
 
-    <!-- Modal pour créer/modifier un utilisateur -->
     <CardBoxModal
       v-model="isModalActive"
       :title="formTitle"
@@ -274,6 +307,32 @@ const deleteUser = async (id, username) => {
           type="text"
           placeholder="ex: jean_dupont"
         />
+      </FormField>
+
+      <FormField label="Avatar" help="Choisissez une image pour l'avatar (optionnel)">
+        <div class="space-y-3">
+          <!-- Aperçu de l'avatar -->
+          <div v-if="imagePreview" class="flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg p-4 h-32">
+            <img :src="imagePreview.startsWith('/') ? `http://localhost:3001${imagePreview}` : imagePreview" alt="Avatar preview" class="w-24 h-24 rounded-full object-cover border-2 border-blue-500" />
+          </div>
+          
+          <!-- Upload image -->
+          <label class="block">
+            <input 
+              type="file" 
+              accept="image/*"
+              @change="handleImageSelect"
+              class="hidden"
+            >
+            <span class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer transition-colors">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Choisir une image
+            </span>
+          </label>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Formats: JPG, PNG, GIF (Max 5MB) - Optionnel</p>
+        </div>
       </FormField>
 
       <FormField

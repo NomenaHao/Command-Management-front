@@ -18,16 +18,17 @@ export const menuAsideMain = [
     icon: mdiMonitor,
     label: 'Tableau de bord',
   },
+   {
+    to: '/admin/users',
+    label: 'Admins',
+    icon: mdiAccountMultiple,
+  },
   {
     to: '/tables',
     label: 'Liste des clients',
     icon: mdiTable,
   },
-  {
-    to: '/admin/users',
-    label: 'Gestion des utilisateurs',
-    icon: mdiAccountMultiple,
-  },
+ 
 ]
 
 export const menuAsideBottom = [

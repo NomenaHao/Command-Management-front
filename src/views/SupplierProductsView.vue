@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { mdiArrowLeft, mdiPlus, mdiPencil, mdiTrashCan, mdiImage } from '@mdi/js'
+import { mdiArrowLeft, mdiPlus, mdiPencil, mdiTrashCan, mdiImage, mdiFileDocument } from '@mdi/js'
+import html2pdf from 'html2pdf.js'
 import SectionMain from '../components/SectionMain.vue'
 import NotificationBar from '../components/NotificationBar.vue'
 import CardBox from '../components/CardBox.vue'
@@ -23,6 +24,20 @@ const currentProduct = ref(null)
 const isEditing = ref(false)
 const selectedImage = ref(null)
 const imagePreview = ref(null)
+const showInvoiceModal = ref(false)
+const selectedItems = ref([])
+const invoiceData = ref({
+  clientName: '',
+  clientAddress: '',
+  invoiceNumber: `INV-${Date.now()}`,
+  date: new Date().toLocaleDateString('fr-FR')
+})
+
+const invoiceTotal = computed(() => {
+  return selectedItems.value.reduce((total, item) => {
+    return total + (item.price * item.quantity)
+  }, 0)
+})
 
 onMounted(async () => {
   await loadProducts()
@@ -137,6 +152,67 @@ const handleImageError = (event) => {
   // Remplacer par l'icône par défaut si l'image ne peut pas être chargée
   console.warn('Erreur chargement image:', event)
 }
+
+const openInvoiceModal = () => {
+  selectedItems.value = []
+  invoiceData.value = {
+    clientName: supplierName,
+    clientAddress: '',
+    invoiceNumber: `INV-${Date.now()}`,
+    date: new Date().toLocaleDateString('fr-FR')
+  }
+  showInvoiceModal.value = true
+}
+
+const closeInvoiceModal = () => {
+  showInvoiceModal.value = false
+  selectedItems.value = []
+}
+
+const toggleItemSelection = (product) => {
+  const index = selectedItems.value.findIndex(item => item.id === product.id)
+  if (index > -1) {
+    selectedItems.value.splice(index, 1)
+  } else {
+    // Nettoyer le prix en supprimant les espaces et points de formatage
+    const cleanPrice = parseFloat(String(product.price).replace(/\s/g, '').replace(/\./g, ''))
+    selectedItems.value.push({ ...product, quantity: 1, price: cleanPrice })
+  }
+}
+
+const updateItemQuantity = (productId, quantity) => {
+  const item = selectedItems.value.find(item => item.id === productId)
+  if (item) {
+    item.quantity = Math.max(1, parseInt(quantity) || 1)
+  }
+}
+
+const generateInvoicePDF = () => {
+  if (selectedItems.value.length === 0) {
+    alert('Veuillez sélectionner au moins un article')
+    return
+  }
+
+  const invoiceHTML = document.getElementById('invoice-content')
+  if (!invoiceHTML) return
+
+  const opt = {
+    margin: 10,
+    filename: `${invoiceData.value.invoiceNumber}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+  }
+
+  html2pdf().set(opt).from(invoiceHTML).save()
+  closeInvoiceModal()
+  success.value = 'Facture générée avec succès'
+  setTimeout(() => { success.value = '' }, 3000)
+}
+
+const cleanPrice = (price) => {
+  return parseFloat(String(price).replace(/\s/g, '').replace(/\./g, ''))
+}
 </script>
 
 <template>
@@ -162,15 +238,26 @@ const handleImageError = (event) => {
             </div>
             <p class="text-gray-600 dark:text-gray-400 mt-2">Gérez les articles de ce client</p>
           </div>
-          <button
-            @click="openProductModal()"
-            class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center space-x-2"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            <span>Nouvel article</span>
-          </button>
+          <div class="flex space-x-2">
+            <button
+              @click="openInvoiceModal()"
+              class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center space-x-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>Générer facture</span>
+            </button>
+            <button
+              @click="openProductModal()"
+              class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all flex items-center space-x-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              <span>Nouvel article</span>
+            </button>
+          </div>
         </div>
       </div>
       
@@ -370,6 +457,205 @@ const handleImageError = (event) => {
               <BaseButton type="submit" color="info" :label="isEditing ? 'Modifier' : 'Ajouter'" />
             </div>
           </form>
+        </div>
+      </div>
+
+      <!-- Modal pour générer la facture -->
+      <div v-if="showInvoiceModal" class="fixed inset-0 overflow-y-auto h-full flex items-center justify-center z-50 bg-black/40 backdrop-blur-md">
+        <div class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl p-8 rounded-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl border border-white/20 dark:border-gray-700/20">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Générer une facture</h3>
+            <button type="button" @click="closeInvoiceModal" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-3 gap-6">
+            <!-- Sélection des articles -->
+            <div class="col-span-1">
+              <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Sélectionner les articles</h4>
+              <div class="space-y-2 max-h-96 overflow-y-auto">
+                <div v-for="product in products" :key="product.id" class="flex items-start space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <input 
+                    type="checkbox" 
+                    :id="`product-${product.id}`"
+                    :checked="selectedItems.some(item => item.id === product.id)"
+                    @change="toggleItemSelection(product)"
+                    class="mt-1 cursor-pointer"
+                  >
+                  <label :for="`product-${product.id}`" class="flex-1 cursor-pointer">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ product.name }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ product.price }} Ar</p>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Détails de la facture -->
+            <div class="col-span-2">
+              <div class="space-y-4 mb-6">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Numéro de facture</label>
+                  <input 
+                    v-model="invoiceData.invoiceNumber" 
+                    type="text" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  >
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nom du client</label>
+                    <input 
+                      v-model="invoiceData.clientName" 
+                      type="text" 
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+                    <input 
+                      v-model="invoiceData.date" 
+                      type="text" 
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    >
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Adresse du client</label>
+                  <textarea 
+                    v-model="invoiceData.clientAddress" 
+                    rows="2"
+                    placeholder="Adresse du client (optionnel)"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Tableau des articles sélectionnés -->
+              <div class="mb-6">
+                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Articles</h4>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead class="bg-gray-100 dark:bg-gray-700">
+                      <tr>
+                        <th class="px-3 py-2 text-left text-gray-700 dark:text-gray-300">Article</th>
+                        <th class="px-3 py-2 text-center text-gray-700 dark:text-gray-300 w-16">Prix</th>
+                        <th class="px-3 py-2 text-center text-gray-700 dark:text-gray-300 w-16">Qté</th>
+                        <th class="px-3 py-2 text-right text-gray-700 dark:text-gray-300 w-20">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-if="selectedItems.length === 0" class="text-center py-4">
+                        <td colspan="4" class="text-gray-500 dark:text-gray-400 py-4">Sélectionnez un article</td>
+                      </tr>
+                      <tr v-for="item in selectedItems" :key="item.id" class="border-b border-gray-200 dark:border-gray-700">
+                        <td class="px-3 py-2 text-gray-900 dark:text-white">{{ item.name }}</td>
+                        <td class="px-3 py-2 text-center text-gray-900 dark:text-white">{{ item.price }} Ar</td>
+                        <td class="px-3 py-2 text-center">
+                          <input 
+                            type="number" 
+                            :value="item.quantity" 
+                            @change="e => updateItemQuantity(item.id, e.target.value)"
+                            min="1" 
+                            class="w-12 px-1 py-1 text-center border border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          >
+                        </td>
+                        <td class="px-3 py-2 text-right text-gray-900 dark:text-white font-semibold">{{ (item.price * item.quantity).toLocaleString('fr-FR') }} Ar</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Total -->
+              <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 p-4 rounded-lg mb-6">
+                <div class="flex justify-between items-center">
+                  <span class="text-lg font-semibold text-gray-900 dark:text-white">Montant total:</span>
+                  <span class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    {{ invoiceTotal.toLocaleString('fr-FR') }} Ar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex justify-end space-x-3">
+                <button 
+                  @click="closeInvoiceModal"
+                  class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                >
+                  Annuler
+                </button>
+                <button 
+                  @click="generateInvoicePDF"
+                  class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md shadow-lg transform hover:scale-105 transition-all flex items-center space-x-2"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2m0 0v-8m0 8l-6-4m6 4l6-4" />
+                  </svg>
+                  <span>Générer PDF</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hidden Invoice Content for PDF -->
+          <div id="invoice-content" class="hidden">
+            <div style="padding: 20px; font-family: Arial, sans-serif;">
+              <h1 style="text-align: center; margin-bottom: 30px; font-size: 24px;">FACTURE</h1>
+              
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+                <div>
+                  <p style="margin: 0; font-weight: bold;">Numéro de facture:</p>
+                  <p style="margin: 0; font-size: 14px;">{{ invoiceData.invoiceNumber }}</p>
+                </div>
+                <div style="text-align: right;">
+                  <p style="margin: 0; font-weight: bold;">Date:</p>
+                  <p style="margin: 0; font-size: 14px;">{{ invoiceData.date }}</p>
+                </div>
+              </div>
+
+              <div style="border: 1px solid #ccc; padding: 15px; margin-bottom: 30px;">
+                <p style="margin: 0; font-weight: bold;">Client:</p>
+                <p style="margin: 5px 0 0 0; font-size: 14px;">{{ invoiceData.clientName }}</p>
+                <p v-if="invoiceData.clientAddress" style="margin: 5px 0 0 0; font-size: 14px;">{{ invoiceData.clientAddress }}</p>
+              </div>
+
+              <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                <thead>
+                  <tr style="border-bottom: 2px solid #333;">
+                    <th style="text-align: left; padding: 10px; font-weight: bold;">Article</th>
+                    <th style="text-align: center; padding: 10px; font-weight: bold;">Prix (Ar)</th>
+                    <th style="text-align: center; padding: 10px; font-weight: bold;">Quantité</th>
+                    <th style="text-align: right; padding: 10px; font-weight: bold;">Total (Ar)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in selectedItems" :key="item.id" style="border-bottom: 1px solid #ddd;">
+                    <td style="padding: 10px;">{{ item.name }}</td>
+                    <td style="text-align: center; padding: 10px;">{{ item.price }}</td>
+                    <td style="text-align: center; padding: 10px;">{{ item.quantity }}</td>
+                    <td style="text-align: right; padding: 10px; font-weight: bold;">{{ (item.price * item.quantity).toLocaleString('fr-FR') }}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div style="display: flex; justify-content: flex-end; margin-bottom: 30px;">
+                <div style="width: 300px;">
+                  <div style="display: flex; justify-content: space-between; padding: 10px; border-top: 2px solid #333;">
+                    <span style="font-weight: bold; font-size: 18px;">TOTAL:</span>
+                    <span style="font-weight: bold; font-size: 18px;">{{ invoiceTotal.toLocaleString('fr-FR') }} Ar</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="text-align: center; margin-top: 40px; color: #666; font-size: 12px;">
+                <p style="margin: 0;">Merci pour votre achat</p>
+                <p style="margin: 5px 0 0 0;">Facture générée le {{ new Date().toLocaleDateString('fr-FR') }}</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </SectionMain>
