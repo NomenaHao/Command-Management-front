@@ -19,7 +19,7 @@ export const authService = {
 
   // Obtenir le profil utilisateur
   getProfile() {
-    return api.get('/users/profile')
+    return api.get('/users/me')
   },
 
   // Mettre à jour le profil

@@ -39,7 +39,8 @@ const submit = async () => {
       // Mettre à jour le store avec les infos utilisateur
       const mainStore = useMainStore()
       mainStore.setUser({ 
-        username: response.data.user.username
+        username: response.data.user.username,
+        avatar: response.data.user.avatar
       })
       
       // Marquer comme authentifié

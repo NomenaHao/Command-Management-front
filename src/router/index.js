@@ -83,18 +83,36 @@ const router = createRouter({
 })
 
 // Protection des routes - rediriger vers login si non authentifié
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
   
-  // Charger les infos utilisateur si authentifié et pas encore chargées
+  // Charger les infos utilisateur si authentifié
   if (isAuthenticated) {
     const mainStore = useMainStore()
-    if (!mainStore.userName) {
-      const user = authService.getCurrentUser()
-      if (user) {
+    
+    // Toujours recharger depuis l'API pour avoir les données à jour (incluant l'avatar)
+    try {
+      const response = await authService.getProfile()
+      console.log('Profile loaded from API:', response.data)
+      if (response.data && response.data.user) {
         mainStore.setUser({
-          username: user.username
+          username: response.data.user.username,
+          avatar: response.data.user.avatar
         })
+        // Mettre à jour localStorage avec les nouvelles données
+        authService.saveUser(response.data.user, localStorage.getItem('token'))
+      }
+    } catch (err) {
+      console.error('Erreur chargement profil:', err)
+      // Si erreur, utiliser les données de localStorage en fallback
+      if (!mainStore.userName) {
+        const user = authService.getCurrentUser()
+        if (user) {
+          mainStore.setUser({
+            username: user.username,
+            avatar: user.avatar
+          })
+        }
       }
     }
   }

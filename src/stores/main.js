@@ -4,14 +4,22 @@ import axios from 'axios'
 
 export const useMainStore = defineStore('main', () => {
   const userName = ref('')  // Sera mis à jour après connexion
-  const userEmail = ref('')  // Sera mis à jour après connexion
+  const userAvatarPath = ref('')  // Avatar uploadé par l'utilisateur
 
   const userAvatar = computed(
-    () =>
-      `https://api.dicebear.com/7.x/avataaars/svg?seed=${userName.value.replace(
+    () => {
+      // Si l'utilisateur a un avatar uploadé, l'utiliser
+      if (userAvatarPath.value) {
+        return userAvatarPath.value.startsWith('http') 
+          ? userAvatarPath.value 
+          : `http://localhost:3001${userAvatarPath.value}`
+      }
+      // Sinon, utiliser Dicebear
+      return `https://api.dicebear.com/7.x/avataaars/svg?seed=${userName.value.replace(
         /[^a-z0-9]+/gi,
         '-',
-      )}`,
+      )}`
+    },
   )
 
   const isFieldFocusRegistered = ref(false)
@@ -20,8 +28,13 @@ export const useMainStore = defineStore('main', () => {
   const history = ref([])
 
   function setUser(payload) {
+    console.log('setUser called with:', payload)
     if (payload.username) {
       userName.value = payload.username
+    }
+    if (payload.avatar !== undefined) {
+      console.log('Setting avatar to:', payload.avatar)
+      userAvatarPath.value = payload.avatar
     }
   }
 
@@ -49,7 +62,7 @@ export const useMainStore = defineStore('main', () => {
 
   return {
     userName,
-    userEmail,
+    userAvatarPath,
     userAvatar,
     isFieldFocusRegistered,
     clients,

@@ -1,7 +1,7 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { mdiTableBorder, mdiPlus, mdiEye, mdiPencil, mdiTrashCan } from '@mdi/js'
+import { mdiTableBorder, mdiPlus, mdiEye, mdiPencil, mdiTrashCan, mdiMagnify } from '@mdi/js'
 import SectionMain from '../components/SectionMain.vue'
 import NotificationBar from '../components/NotificationBar.vue'
 import CardBox from '../components/CardBox.vue'
@@ -25,6 +25,47 @@ const newSupplier = ref({
 })
 const isEditingSupplier = ref(false)
 const editingSupplierId = ref(null)
+
+// Pagination et recherche
+const searchQuery = ref('')
+const currentPage = ref(1)
+const itemsPerPage = ref(10)
+
+// Filtrer les fournisseurs selon la recherche
+const filteredSuppliers = computed(() => {
+  if (!searchQuery.value) return suppliers.value
+  
+  const query = searchQuery.value.toLowerCase()
+  return suppliers.value.filter(supplier => 
+    supplier.name.toLowerCase().includes(query) ||
+    (supplier.phone && supplier.phone.toLowerCase().includes(query)) ||
+    (supplier.address && supplier.address.toLowerCase().includes(query))
+  )
+})
+
+// Calculer le nombre total de pages
+const totalPages = computed(() => {
+  return Math.ceil(filteredSuppliers.value.length / itemsPerPage.value)
+})
+
+// Obtenir les fournisseurs de la page actuelle
+const paginatedSuppliers = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  return filteredSuppliers.value.slice(start, end)
+})
+
+// Changer de page
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+// Réinitialiser à la page 1 lors de la recherche
+const handleSearch = () => {
+  currentPage.value = 1
+}
 
 // Charger les fournisseurs au montage
 onMounted(async () => {
@@ -138,6 +179,27 @@ const goToSupplierProducts = (supplierId, supplierName) => {
           />
         </div>
       </div>
+
+      <!-- Barre de recherche -->
+      <div class="mb-6">
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input 
+            v-model="searchQuery"
+            @input="handleSearch"
+            type="text" 
+            placeholder="Rechercher un client par nom, téléphone ou adresse..." 
+            class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white dark:bg-gray-800 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white"
+          >
+        </div>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          {{ filteredSuppliers.length }} client{{ filteredSuppliers.length > 1 ? 's' : '' }} trouvé{{ filteredSuppliers.length > 1 ? 's' : '' }}
+        </p>
+      </div>
       
       <!-- Message de succès -->
       <div v-if="success" class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
@@ -163,11 +225,19 @@ const goToSupplierProducts = (supplierId, supplierName) => {
         <p class="mt-2 text-gray-500 dark:text-gray-400">Commencez par ajouter votre premier client</p>
         <BaseButton color="info" :icon="mdiPlus" label="Créer le premier client" @click="openSupplierModal()" class="mt-6 shadow-lg" />
       </div>
+
+      <div v-else-if="filteredSuppliers.length === 0" class="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+        <svg class="mx-auto h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <h3 class="mt-4 text-xl font-semibold text-gray-900 dark:text-white">Aucun résultat</h3>
+        <p class="mt-2 text-gray-500 dark:text-gray-400">Aucun client ne correspond à votre recherche</p>
+      </div>
       
       <!-- Grille de cartes -->
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div 
-          v-for="supplier in suppliers" 
+          v-for="supplier in paginatedSuppliers" 
           :key="supplier.id" 
           class="group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 dark:border-gray-700 hover:scale-105 cursor-pointer"
         >
@@ -256,6 +326,76 @@ const goToSupplierProducts = (supplierId, supplierName) => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
               </svg>
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="totalPages > 1" class="mt-8 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 sm:px-6 rounded-lg shadow">
+        <div class="flex-1 flex justify-between sm:hidden">
+          <button 
+            @click="goToPage(currentPage - 1)"
+            :disabled="currentPage === 1"
+            class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Précédent
+          </button>
+          <button 
+            @click="goToPage(currentPage + 1)"
+            :disabled="currentPage === totalPages"
+            class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Suivant
+          </button>
+        </div>
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              Affichage de 
+              <span class="font-medium">{{ (currentPage - 1) * itemsPerPage + 1 }}</span>
+              à
+              <span class="font-medium">{{ Math.min(currentPage * itemsPerPage, filteredSuppliers.length) }}</span>
+              sur
+              <span class="font-medium">{{ filteredSuppliers.length }}</span>
+              résultat{{ filteredSuppliers.length > 1 ? 's' : '' }}
+            </p>
+          </div>
+          <div>
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+              <button 
+                @click="goToPage(currentPage - 1)"
+                :disabled="currentPage === 1"
+                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              
+              <button 
+                v-for="page in totalPages" 
+                :key="page"
+                @click="goToPage(page)"
+                :class="[
+                  'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
+                  page === currentPage 
+                    ? 'z-10 bg-blue-600 border-blue-600 text-white' 
+                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                ]"
+              >
+                {{ page }}
+              </button>
+              
+              <button 
+                @click="goToPage(currentPage + 1)"
+                :disabled="currentPage === totalPages"
+                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </nav>
           </div>
         </div>
       </div>
