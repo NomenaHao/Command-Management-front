@@ -1,7 +1,4 @@
-/* Tailwind CSS v4 import */
 @import 'tailwindcss';
-
-/* Import custom CSS files */
 @import './_checkbox-radio-switch.css';
 @import './_keyframes.css';
 @import './_progress.css';
@@ -13,7 +10,7 @@
 /*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
-  looks as same as it did with Tailwind CSS v3.
+  looks the same as it did with Tailwind CSS v3.
 
   If we ever want to remove these styles, we need to add an explicit border
   color utility to any element that depends on these defaults.
@@ -27,47 +24,3 @@
     border-color: var(--color-gray-200, currentColor);
   }
 }
-
-/* Basic Tailwind styles */
-.btn {
-  @apply px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700;
-}
-
-.card {
-  @apply bg-white dark:bg-gray-800 rounded-lg shadow-md;
-}
-
-.form-input {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500;
-}
-
-/* Page styles */
-.page {
-  @apply min-h-screen bg-gray-50 dark:bg-gray-900;
-}
-
-.page-container {
-  @apply mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8;
-}
-
-.page-header {
-  @apply mb-8;
-}
-
-.page-title {
-  @apply text-3xl font-bold text-gray-900 dark:text-white;
-}
-
-.page-subtitle {
-  @apply mt-2 text-lg text-gray-600 dark:text-gray-400;
-}
-
-/* Login page specific */
-.login-page {
-  @apply flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800;
-}
-
-.login-container {
-  @apply w-full max-w-md rounded-lg bg-white p-8 shadow-lg dark:bg-gray-800;
-}
-

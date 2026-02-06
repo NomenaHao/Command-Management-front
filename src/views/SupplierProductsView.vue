@@ -2,7 +2,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { mdiArrowLeft, mdiPlus, mdiPencil, mdiTrashCan, mdiImage, mdiFileDocument, mdiMagnify } from '@mdi/js'
-import html2pdf from 'html2pdf.js'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import SectionMain from '../components/SectionMain.vue'
 import NotificationBar from '../components/NotificationBar.vue'
 import CardBox from '../components/CardBox.vue'
@@ -268,41 +269,151 @@ const generateInvoicePDF = () => {
   closeInvoiceModal(false) // Ne pas vider les items sélectionnés
 }
 
-const downloadInvoicePDF = () => {
-  const invoiceHTML = document.getElementById('invoice-preview-content')
-  if (!invoiceHTML) {
-    alert('Impossible de trouver le contenu de la facture')
+const downloadInvoicePDF = async () => {
+  if (selectedItems.value.length === 0) {
+    alert('Veuillez sélectionner au moins un article')
     return
   }
 
   isDownloading.value = true
   
-  // Utiliser setTimeout pour ne pas bloquer l'UI
-  setTimeout(() => {
-    const opt = {
-      margin: 10,
-      filename: `${invoiceData.value.invoiceNumber}.pdf`,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { 
-        scale: 1.5,
-        backgroundColor: '#ffffff'
-      },
-      jsPDF: { 
-        orientation: 'portrait', 
-        unit: 'mm', 
-        format: 'a4'
-      }
+  try {
+    // Créer le document PDF
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    })
+
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const margin = 20
+    const contentWidth = pageWidth - (margin * 2)
+
+    // Couleurs
+    const primaryColor = [37, 99, 235] // blue-600
+    const darkColor = [31, 41, 55]    // gray-800
+    const lightGray = [107, 114, 128] // gray-500
+
+    // === EN-TÊTE ===
+    doc.setFontSize(24)
+    doc.setTextColor(...primaryColor)
+    doc.setFont('helvetica', 'bold')
+    doc.text(invoiceData.value.companyName || 'Votre Société', margin, 30)
+
+    doc.setFontSize(12)
+    doc.setTextColor(...lightGray)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Facture commerciale', margin, 38)
+
+    // === TITRE FACTURE ===
+    doc.setFontSize(28)
+    doc.setTextColor(...darkColor)
+    doc.setFont('helvetica', 'bold')
+    doc.text('FACTURE', pageWidth / 2, 55, { align: 'center' })
+
+    // === INFO FACTURE ===
+    doc.setFontSize(11)
+    doc.setTextColor(...lightGray)
+    doc.setFont('helvetica', 'bold')
+    doc.text('N° FACTURE', margin, 75)
+    doc.text('DATE', margin + 70, 75)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...darkColor)
+    doc.setFontSize(13)
+    doc.text(invoiceData.value.invoiceNumber, margin, 82)
+    doc.text(invoiceData.value.date, margin + 70, 82)
+
+    // === INFO CLIENT ===
+    doc.setFillColor(253, 242, 248) // rose très clair
+    doc.roundedRect(margin, 90, contentWidth, 35, 3, 3, 'F')
+    
+    doc.setFontSize(10)
+    doc.setTextColor(190, 24, 93) // rose
+    doc.setFont('helvetica', 'bold')
+    doc.text('FACTURÉ À:', margin + 5, 100)
+    
+    doc.setFontSize(12)
+    doc.setTextColor(...darkColor)
+    doc.text(invoiceData.value.clientName, margin + 5, 110)
+    
+    if (invoiceData.value.clientAddress) {
+      doc.setFontSize(10)
+      doc.setTextColor(...lightGray)
+      const addressLines = doc.splitTextToSize(invoiceData.value.clientAddress, contentWidth - 10)
+      doc.text(addressLines, margin + 5, 118)
     }
 
-    html2pdf().from(invoiceHTML).set(opt).save()
+    // === TABLEAU DES ARTICLES ===
+    const tableData = selectedItems.value.map(item => [
+      item.name,
+      item.price.toLocaleString('fr-FR'),
+      item.quantity.toString(),
+      (item.price * item.quantity).toLocaleString('fr-FR')
+    ])
+
+    autoTable(doc, {
+      startY: 135,
+      head: [['Désignation', 'Prix Unitaire (Ar)', 'Qté', 'Montant (Ar)']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [243, 244, 246],
+        textColor: [31, 41, 55],
+        fontStyle: 'bold',
+        fontSize: 10
+      },
+      bodyStyles: {
+        fontSize: 10,
+        textColor: [31, 41, 55]
+      },
+      columnStyles: {
+        0: { cellWidth: 'auto', halign: 'left' },
+        1: { cellWidth: 40, halign: 'center' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 40, halign: 'right', fontStyle: 'bold' }
+      },
+      margin: { left: margin, right: margin },
+      styles: {
+        lineColor: [229, 231, 235],
+        lineWidth: 0.5
+      }
+    })
+
+    // === TOTAL ===
+    const finalY = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 15 : 150
     
-    setTimeout(() => {
-      isDownloading.value = false
-      closeInvoicePreview()
-      success.value = 'Facture téléchargée avec succès'
-      setTimeout(() => { success.value = '' }, 3000)
-    }, 2000)
-  }, 100)
+    doc.setFillColor(249, 250, 251)
+    doc.roundedRect(pageWidth - margin - 80, finalY, 80, 20, 2, 2, 'F')
+    
+    doc.setFontSize(11)
+    doc.setTextColor(...darkColor)
+    doc.setFont('helvetica', 'bold')
+    doc.text('TOTAL:', pageWidth - margin - 70, finalY + 8)
+    
+    doc.setFontSize(14)
+    doc.setTextColor(...primaryColor)
+    doc.text(`${invoiceTotal.value.toLocaleString('fr-FR')} Ar`, pageWidth - margin - 5, finalY + 13, { align: 'right' })
+
+    // === PIED DE PAGE ===
+    const pageHeight = doc.internal.pageSize.getHeight()
+    doc.setFontSize(9)
+    doc.setTextColor(...lightGray)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Merci pour votre confiance et votre achat', pageWidth / 2, pageHeight - 20, { align: 'center' })
+    doc.text(`Facture générée le ${new Date().toLocaleDateString('fr-FR')}`, pageWidth / 2, pageHeight - 15, { align: 'center' })
+
+    // Sauvegarder
+    doc.save(`${invoiceData.value.invoiceNumber}.pdf`)
+    
+    success.value = 'Facture téléchargée avec succès'
+    setTimeout(() => { success.value = '' }, 3000)
+  } catch (err) {
+    console.error('Erreur lors du téléchargement PDF:', err)
+    alert('Erreur lors de la génération du PDF: ' + err.message)
+  } finally {
+    isDownloading.value = false
+  }
 }
 
 const printInvoice = () => {
