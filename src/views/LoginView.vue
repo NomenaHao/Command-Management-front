@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useDarkModeStore } from '../stores/darkMode.js'
 import { useMainStore } from '../stores/main.js'
 import authService from '../services/authService.js'
+import userService from '../services/userService.js'
 
 const form = reactive({
   username: '',
@@ -33,15 +34,32 @@ const submit = async () => {
     })
     
     if (response.data.token) {
-      // Sauvegarder le token et les infos utilisateur
+      // Sauvegarder le token et les infos utilisateur de base
       authService.saveUser(response.data.user, response.data.token)
       
-      // Mettre à jour le store avec les infos utilisateur
+      // Mettre à jour le store avec les infos utilisateur de base
       const mainStore = useMainStore()
       mainStore.setUser({ 
-        username: response.data.user.username,
-        avatar: response.data.user.avatar
+        username: response.data.user.username
       })
+      
+      // Récupérer l'avatar depuis la liste des utilisateurs
+      try {
+        const usersResponse = await userService.getAllUsers()
+        if (usersResponse.data && usersResponse.data.users) {
+          const currentUser = usersResponse.data.users.find(u => u.id === response.data.user.id)
+          if (currentUser && currentUser.avatar) {
+            mainStore.setUser({
+              username: currentUser.username,
+              avatar: currentUser.avatar
+            })
+            // Mettre à jour localStorage avec l'avatar
+            authService.saveUser(currentUser, response.data.token)
+          }
+        }
+      } catch (usersErr) {
+        console.error('Erreur récupération liste utilisateurs:', usersErr)
+      }
       
       // Marquer comme authentifié
       localStorage.setItem('isAuthenticated', 'true')

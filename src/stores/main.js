@@ -28,12 +28,10 @@ export const useMainStore = defineStore('main', () => {
   const history = ref([])
 
   function setUser(payload) {
-    console.log('setUser called with:', payload)
     if (payload.username) {
       userName.value = payload.username
     }
-    if (payload.avatar !== undefined) {
-      console.log('Setting avatar to:', payload.avatar)
+    if (payload.avatar && payload.avatar.trim() !== '') {
       userAvatarPath.value = payload.avatar
     }
   }

@@ -13,6 +13,7 @@ import UserCard from '../components/UserCard.vue'
 import LayoutAuthenticated from '../layouts/LayoutAuthenticated.vue'
 import SectionTitleLineWithButton from '../components/SectionTitleLineWithButton.vue'
 import authService from '../services/authService.js'
+import userService from '../services/userService.js'
 
 const mainStore = useMainStore()
 
@@ -59,14 +60,20 @@ const submitProfile = async () => {
     
     await authService.updateProfile(formData)
     
-    // Recharger les données utilisateur depuis le serveur
-    const user = await authService.getProfile()
-    if (user.data && user.data.user) {
-      mainStore.setUser({
-        username: user.data.user.username,
-        avatar: user.data.user.avatar
-      })
-      avatarPreview.value = user.data.user.avatar
+    // Recharger les données utilisateur depuis la liste (car /users/me retourne 500)
+    const usersResponse = await userService.getAllUsers()
+    if (usersResponse.data && usersResponse.data.users) {
+      const currentUser = usersResponse.data.users.find(u => u.username === profileForm.name)
+      if (currentUser) {
+        mainStore.setUser({
+          username: currentUser.username,
+          avatar: currentUser.avatar
+        })
+        // Mettre à jour localStorage pour persister l'avatar
+        const currentToken = localStorage.getItem('token')
+        authService.saveUser(currentUser, currentToken)
+        avatarPreview.value = currentUser.avatar
+      }
     }
     
     success.value = 'Profil mis à jour avec succès'

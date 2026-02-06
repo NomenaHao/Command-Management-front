@@ -1,10 +1,12 @@
 <script setup>
 import { mdiForwardburger, mdiBackburger, mdiMenu } from '@mdi/js'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { menuAsideMain, menuAsideBottom } from '../menuAside.js'
 import menuNavBar from '../menuNavBar.js'
 import { useDarkModeStore } from '../stores/darkMode.js'
+import { useMainStore } from '../stores/main.js'
+import authService from '../services/authService.js'
 import BaseIcon from '../components/BaseIcon.vue'
 import FormControl from '../components/FormControl.vue'
 import NavBar from '../components/NavBar.vue'
@@ -15,11 +17,23 @@ import FooterBar from '../components/FooterBar.vue'
 const layoutAsidePadding = 'xl:pl-60'
 
 const darkModeStore = useDarkModeStore()
+const mainStore = useMainStore()
 
 const router = useRouter()
 
 const isAsideMobileExpanded = ref(false)
 const isAsideLgActive = ref(false)
+
+// Initialiser le store avec l'utilisateur du localStorage au chargement
+onMounted(() => {
+  const user = authService.getCurrentUser()
+  if (user) {
+    mainStore.setUser({
+      username: user.username,
+      avatar: user.avatar
+    })
+  }
+})
 
 router.beforeEach(() => {
   isAsideMobileExpanded.value = false

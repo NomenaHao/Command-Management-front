@@ -3,6 +3,7 @@ import Home from '../views/HomeView.vue'
 import Login from '../views/LoginView.vue'
 import { useMainStore } from '../stores/main.js'
 import authService from '../services/authService.js'
+import userService from '../services/userService.js'
 
 const routes = [
   {
@@ -85,35 +86,39 @@ const router = createRouter({
 // Protection des routes - rediriger vers login si non authentifié
 router.beforeEach(async (to, from, next) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
-  
-  // Charger les infos utilisateur si authentifié
+    // Charger les infos utilisateur si authentifié
   if (isAuthenticated) {
     const mainStore = useMainStore()
     
-    // Toujours recharger depuis l'API pour avoir les données à jour (incluant l'avatar)
-    try {
-      const response = await authService.getProfile()
-      console.log('Profile loaded from API:', response.data)
-      if (response.data && response.data.user) {
+    // Récupérer depuis localStorage d'abord pour affichage rapide
+    if (!mainStore.userName) {
+      const user = authService.getCurrentUser()
+      if (user) {
         mainStore.setUser({
-          username: response.data.user.username,
-          avatar: response.data.user.avatar
+          username: user.username,
+          avatar: user.avatar
         })
-        // Mettre à jour localStorage avec les nouvelles données
-        authService.saveUser(response.data.user, localStorage.getItem('token'))
       }
-    } catch (err) {
-      console.error('Erreur chargement profil:', err)
-      // Si erreur, utiliser les données de localStorage en fallback
-      if (!mainStore.userName) {
-        const user = authService.getCurrentUser()
-        if (user) {
-          mainStore.setUser({
-            username: user.username,
-            avatar: user.avatar
-          })
+    }
+    
+    // Essayer de mettre à jour depuis l'API (utilise getAllUsers car getProfile retourne 500)
+    try {
+      const token = localStorage.getItem('token')
+      if (token) {
+        const response = await userService.getAllUsers()
+        if (response.data && response.data.users) {
+          const currentUser = response.data.users.find(u => u.username === mainStore.userName)
+          if (currentUser) {
+            mainStore.setUser({
+              username: currentUser.username,
+              avatar: currentUser.avatar
+            })
+            authService.saveUser(currentUser, token)
+          }
         }
       }
+    } catch (err) {
+      console.error('Erreur mise à jour profil:', err)
     }
   }
   
