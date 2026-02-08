@@ -278,7 +278,6 @@ const downloadInvoicePDF = async () => {
   isDownloading.value = true
   
   try {
-    // Créer le document PDF
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -289,10 +288,17 @@ const downloadInvoicePDF = async () => {
     const margin = 20
     const contentWidth = pageWidth - (margin * 2)
 
-    // Couleurs
-    const primaryColor = [37, 99, 235] // blue-600
-    const darkColor = [31, 41, 55]    // gray-800
-    const lightGray = [107, 114, 128] // gray-500
+    // ✅ Fonction de formatage CORRECTE
+    const formatPrice = (price) => {
+      return new Intl.NumberFormat('fr-FR', { 
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(price).replace(/\s/g, '.')
+    }
+
+    const primaryColor = [37, 99, 235]
+    const darkColor = [31, 41, 55]
+    const lightGray = [107, 114, 128]
 
     // === EN-TÊTE ===
     doc.setFontSize(24)
@@ -325,11 +331,11 @@ const downloadInvoicePDF = async () => {
     doc.text(invoiceData.value.date, margin + 70, 82)
 
     // === INFO CLIENT ===
-    doc.setFillColor(253, 242, 248) // rose très clair
+    doc.setFillColor(253, 242, 248)
     doc.roundedRect(margin, 90, contentWidth, 35, 3, 3, 'F')
     
     doc.setFontSize(10)
-    doc.setTextColor(190, 24, 93) // rose
+    doc.setTextColor(190, 24, 93)
     doc.setFont('helvetica', 'bold')
     doc.text('FACTURÉ À:', margin + 5, 100)
     
@@ -345,11 +351,12 @@ const downloadInvoicePDF = async () => {
     }
 
     // === TABLEAU DES ARTICLES ===
+    // ✅ UTILISER formatPrice() pour tous les montants
     const tableData = selectedItems.value.map(item => [
       item.name,
-      item.price.toLocaleString('fr-FR'),
+      formatPrice(item.price),
       item.quantity.toString(),
-      (item.price * item.quantity).toLocaleString('fr-FR')
+      formatPrice(item.price * item.quantity)
     ])
 
     autoTable(doc, {
@@ -369,9 +376,9 @@ const downloadInvoicePDF = async () => {
       },
       columnStyles: {
         0: { cellWidth: 'auto', halign: 'left' },
-        1: { cellWidth: 40, halign: 'center' },
-        2: { cellWidth: 20, halign: 'center' },
-        3: { cellWidth: 40, halign: 'right', fontStyle: 'bold' }
+        1: { cellWidth: 32, halign: 'right' },
+        2: { cellWidth: 15, halign: 'center' },
+        3: { cellWidth: 32, halign: 'right', fontStyle: 'bold' }
       },
       margin: { left: margin, right: margin },
       styles: {
@@ -393,7 +400,8 @@ const downloadInvoicePDF = async () => {
     
     doc.setFontSize(14)
     doc.setTextColor(...primaryColor)
-    doc.text(`${invoiceTotal.value.toLocaleString('fr-FR')} Ar`, pageWidth - margin - 5, finalY + 13, { align: 'right' })
+    // ✅ Utiliser formatPrice() pour le total aussi
+    doc.text(`${formatPrice(invoiceTotal.value)} Ar`, pageWidth - margin - 5, finalY + 13, { align: 'right' })
 
     // === PIED DE PAGE ===
     const pageHeight = doc.internal.pageSize.getHeight()
@@ -403,7 +411,6 @@ const downloadInvoicePDF = async () => {
     doc.text('Merci pour votre confiance et votre achat', pageWidth / 2, pageHeight - 20, { align: 'center' })
     doc.text(`Facture générée le ${new Date().toLocaleDateString('fr-FR')}`, pageWidth / 2, pageHeight - 15, { align: 'center' })
 
-    // Sauvegarder
     doc.save(`${invoiceData.value.invoiceNumber}.pdf`)
     
     success.value = 'Facture téléchargée avec succès'
